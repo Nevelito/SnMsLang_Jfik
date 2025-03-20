@@ -1,6 +1,6 @@
-# Generated from SnMsLang.g4 by ANTLR 4.13.1
+# Generated from grammar/SnMsLang.g4 by ANTLR 4.9.3
 from antlr4 import *
-if "." in __name__:
+if __name__ is not None and "." in __name__:
     from .SnMsLangParser import SnMsLangParser
 else:
     from SnMsLangParser import SnMsLangParser
