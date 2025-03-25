@@ -1,8 +1,7 @@
 from antlr4 import *
 from grammar.SnMsLangLexer import SnMsLangLexer
 from grammar.SnMsLangParser import SnMsLangParser
-from grammar.SnMsLangListener import SnMsLangListener
-from astbuilder import ProgramNode, AssignmentNode, PrintNode, BinaryOpNode, IntNode, VarNode, BlockNode, ASTBuilder, FloatNode, ReadNode, IfNode
+from astbuilder import ProgramNode, AssignmentNode, PrintNode, BinaryOpNode, IntNode, VarNode, BlockNode, ASTBuilder, FloatNode, ReadNode, IfNode, WhileNode
 
 class Interpreter:
     def __init__(self):
@@ -52,6 +51,11 @@ class Interpreter:
             elif node.op == '<>': return int(left <= right)
         elif isinstance(node, IntNode):
             return node.value
+        elif isinstance(node, WhileNode):
+            while self.eval_node(node.condition):
+                for stmt in node.body.statements:
+                    self.eval_node(stmt)
+
         elif isinstance(node, IfNode):
             cond = self.eval_node(node.condition)
             if cond:
@@ -77,20 +81,20 @@ class Interpreter:
 if __name__ == "__main__":
     #input_stream = InputStream("x=5+15;wypisz(x);y=1;wypisz(x-y);")
     #input_stream = InputStream("pi = 0.0;wczytaj(pi);wypisz(pi);")
-    input_stream = InputStream(
-        """
-        x = 2;
-        jezeli (x > 3) {
-            wypisz(x);
-        } inaczej {
-            wypisz(0);
-        }   
+    # input_stream = InputStream(
+    #     """
+    #     x = 2;
+    #     jezeli (x > 3) {
+    #         wypisz(x);
+    #     } inaczej {
+    #         wypisz(0);
+    #     }   
+    #     """
+    # )
+    
+    input_stream = InputStream("x=0; dopoki(x<3){ x=x+1;wypisz(x);  }")
 
-"""
 
-
-
-    )
     lexer = SnMsLangLexer(input_stream)
     tokens = CommonTokenStream(lexer)
     parser = SnMsLangParser(tokens)

@@ -107,6 +107,30 @@ class IRGenerator:
 
             # END block
             self.builder.position_at_start(end_bb)
+        elif isinstance(node, WhileNode):
+            loop_cond_bb = self.func_main.append_basic_block(name="loop_cond")
+            loop_body_bb = self.func_main.append_basic_block(name="loop_body")
+            loop_end_bb = self.func_main.append_basic_block(name="loop_end")
+
+            # Skok na sprawdzenie warunku
+            self.builder.branch(loop_cond_bb)
+
+            # loop_cond:
+            self.builder.position_at_start(loop_cond_bb)
+            cond_val = self.gen_expr(node.condition)
+            cond_bool = self.builder.icmp_signed('!=', cond_val, ir.Constant(cond_val.type, 0))
+            self.builder.cbranch(cond_bool, loop_body_bb, loop_end_bb)
+
+            # loop_body:
+            self.builder.position_at_start(loop_body_bb)
+            for stmt in node.body.statements:
+                self.gen_stmt(stmt)
+            if not self.builder.block.is_terminated:
+                self.builder.branch(loop_cond_bb)
+
+            # loop_end:
+            self.builder.position_at_start(loop_end_bb)
+    
                     
 
 
@@ -214,17 +238,18 @@ if __name__=="__main__":
     #code = "liczbaD=12.312;wypisz(liczbaD / 132.23);"
     #code = 'wczytaj(pi);wypisz(pi + 12);'
     #code = 'wypisz(1232);'
+    # code = """
+    #         x = 26;
+    #         jezeli (x > 3) {
+    #             wypisz(x);
+    #             wypisz(321);
 
-    code = """
-            x = 26;
-            jezeli (x > 3) {
-                wypisz(x);
-                wypisz(321);
+    #         } inaczej {
+    #             wypisz(0);
+    #         }   
+    #         """
 
-            } inaczej {
-                wypisz(0);
-            }   
-            """
+    code = "x=0; dopoki(x<3){ x=x+1;wypisz(1+x);  }"
 
     # Etap 1: Parsowanie kodu
     input_stream = InputStream(code)

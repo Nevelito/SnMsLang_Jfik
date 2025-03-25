@@ -75,6 +75,12 @@ class VarNode:
     def __repr__(self):
         return f"VarNode({self.name})"    
 
+class WhileNode:
+    def __init__(self, condition, body):
+        self.condition = condition
+        self.body = body
+    def __repr__(self):
+        return f"WhileNode(cond={self.condition}, body={self.body})"
 
 
 
@@ -168,6 +174,12 @@ class ASTBuilder(SnMsLangListener):
         while self.stack and isinstance(self.stack[-1], (AssignmentNode, PrintNode, ReadNode, IfNode)):
             stmts.insert(0, self.stack.pop())
         self.stack.append(BlockNode(stmts))
+
+
+    def exitWhileStmt(self, ctx):
+        body = self.stack.pop()
+        condition = self.stack.pop()
+        self.stack.append(WhileNode(condition, body))
 
 
 
