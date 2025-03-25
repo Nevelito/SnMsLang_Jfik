@@ -76,7 +76,38 @@ class IRGenerator:
                 # Jeśli zmienna jeszcze nie istnieje, załóż domyślnie jako i32
                 ptr = self.builder.alloca(ir.IntType(32), name=node.var_name)
                 self.symbols[node.var_name] = ptr
-            self.gen_read(ptr)        
+            self.gen_read(ptr)
+        elif isinstance(node, IfNode):
+            cond_val = self.gen_expr(node.condition)
+            cond_bool = self.builder.icmp_signed('!=', cond_val, ir.Constant(cond_val.type, 0))
+
+            then_bb = self.func_main.append_basic_block(name="then")
+            else_bb = self.func_main.append_basic_block(name="else") if node.else_block else None
+            end_bb = self.func_main.append_basic_block(name="endif")
+
+            if else_bb:
+                self.builder.cbranch(cond_bool, then_bb, else_bb)
+            else:
+                self.builder.cbranch(cond_bool, then_bb, end_bb)
+
+            # THEN block
+            self.builder.position_at_start(then_bb)
+            for stmt in node.then_block.statements:
+                self.gen_stmt(stmt)
+            if not self.builder.block.is_terminated:
+                self.builder.branch(end_bb)
+
+            # ELSE block
+            if else_bb:
+                self.builder.position_at_start(else_bb)
+                for stmt in node.else_block.statements:
+                    self.gen_stmt(stmt)
+                if not self.builder.block.is_terminated:
+                    self.builder.branch(end_bb)
+
+            # END block
+            self.builder.position_at_start(end_bb)
+                    
 
 
     def gen_read(self, ptr):
@@ -122,6 +153,16 @@ class IRGenerator:
                     return self.builder.mul(left, right)
                 elif node.op == '/':
                     return self.builder.sdiv(left, right)
+                elif node.op == '==':
+                    return self.builder.icmp_signed('==', left, right)
+                elif node.op == '!=':
+                    return self.builder.icmp_signed('!=', left, right)
+                elif node.op == '>':
+                    return self.builder.icmp_signed('>', left, right)
+                elif node.op == '<':
+                    return self.builder.icmp_signed('<', left, right)
+                elif node.op == '<>':
+                    return self.builder.icmp_signed('<=', left, right)
             elif left.type == ir.DoubleType():
                 if node.op == '+':
                     return self.builder.fadd(left, right)
@@ -172,8 +213,18 @@ if __name__=="__main__":
     #code = "liczbaC=4;wypisz(liczbaC* 2);"
     #code = "liczbaD=12.312;wypisz(liczbaD / 132.23);"
     #code = 'wczytaj(pi);wypisz(pi + 12);'
+    #code = 'wypisz(1232);'
 
-    code = 'wypisz(12'
+    code = """
+            x = 26;
+            jezeli (x > 3) {
+                wypisz(x);
+                wypisz(321);
+
+            } inaczej {
+                wypisz(0);
+            }   
+            """
 
     # Etap 1: Parsowanie kodu
     input_stream = InputStream(code)

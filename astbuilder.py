@@ -31,6 +31,23 @@ class ReadNode:
     def __repr__(self):
         return f"ReadNode({self.var_name})"
 
+
+class IfNode:
+    def __init__(self, condition, then_block, else_block=None):
+        self.condition = condition
+        self.then_block = then_block
+        self.else_block = else_block
+    def __repr__(self):
+        return f"IfNode(cond={self.condition}, then={self.then_block}, else={self.else_block})"
+
+class BlockNode:
+    def __init__(self, statements):
+        self.statements = statements
+    def __repr__(self):
+        return f"BlockNode({self.statements})"
+
+
+
 class BinaryOpNode:
     def __init__(self, left, op, right):
         self.left = left
@@ -57,6 +74,8 @@ class VarNode:
         self.name = name
     def __repr__(self):
         return f"VarNode({self.name})"    
+
+
 
 
 class ASTBuilder(SnMsLangListener):
@@ -115,11 +134,43 @@ class ASTBuilder(SnMsLangListener):
         var_name = ctx.ID().getText()
         self.stack.append(ReadNode(var_name))
 
+    def exitCompareExpr(self, ctx):
+        right = self.stack.pop()
+        left = self.stack.pop()
+        op = ctx.getChild(1).getText()
+        self.stack.append(BinaryOpNode(left, op, right))
+
+    def exitBoolExpr(self, ctx):
+        val = ctx.BOOL().getText()
+        self.stack.append(IntNode(1 if val == "prawda" else 0))
+
 
     # zmienna np. x
     def exitIdExpr(self, ctx):
         var_name = ctx.ID().getText()
         self.stack.append(VarNode(var_name))
+
+    def exitIfStmt(self, ctx):
+        if ctx.getChildCount() == 5:
+            # if (cond) thenBlock
+            then_block = self.stack.pop()
+            condition = self.stack.pop()
+            self.stack.append(IfNode(condition, then_block))
+        elif ctx.getChildCount() == 7:
+            # if (cond) thenBlock else elseBlock
+            else_block = self.stack.pop()
+            then_block = self.stack.pop()
+            condition = self.stack.pop()
+            self.stack.append(IfNode(condition, then_block, else_block))
+
+    def exitBlock(self, ctx):
+        stmts = []
+        while self.stack and isinstance(self.stack[-1], (AssignmentNode, PrintNode, ReadNode, IfNode)):
+            stmts.insert(0, self.stack.pop())
+        self.stack.append(BlockNode(stmts))
+
+
+
 
     def get_ast(self):
         if len(self.stack) == 1:
